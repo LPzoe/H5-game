@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!--
+    需求分析
+    设计分析
+    代码层面分析：
+    角色：小鸟 背景 地面 管道
+    功能：小鸟上下运动 小鸟翅膀 柱子高度变化 柱子移动循环移动
+
+            碰撞判断  得分判断  游戏难度控制
+    使用技术：面向对象 canvas绘图 定时器
+
+    游戏逻辑：1、定时器函数中不断绘制游戏角色
+            2、更新角色的位置
+            3、判断游戏是否结束
+            4、得分
+    -->
+    <script>
+
+        //游戏相关数据尽量使用全局变量
+        var ctx;
+        var time;//定时器关闭 游戏结束
+        var dis = 150;
+
+        var g = 8;//小鸟下落速度
+        var speed = 10;//管道速度
+        //
+
+        var birdIndex = 0;
+        var score = 0;
+        var flag = true;
+
+        var bg = new Background(0,0,400,600,'./images/bg.png');
+        var ground = new Background(0,550,400,200,'./images/ground.png');
+        var up = new Up_pipe(350,0,100,200,'./images/pipe.png');
+        //y = upheight+空隙高度
+        var down = new Down_pipe(350,350,100,200,'./images/pipe.png');
+        var birds_src= ['./images/0.gif','./images/1.gif','./images/2.gif'];
+        var bird = new Bird(100,300,40,40,birds_src);
+        var array = [];
+        array.push(bg);
+        array.push(ground);
+        array.push(up);
+        array.push(down);
+        array.push(bird);
+        //小鸟构造函数 对象作用把自己绘制到画布上
+        function Bird(x,y,width,height,img_srcs) {
+            this.bx = x;
+            this.by = y;
+            this.bwidth = width;
+            this.bheight = height;
+
+
+            //把自己绘制到画布上的功能函数
+            this.draw = function () {
+                var image = new Image();
+                //取余
+                image.src = img_srcs[birdIndex%3];
+                birdIndex++;
+                ctx.drawImage(image,this.bx,this.by,
+                        this.bwidth,this.bheight);
+            }
+        }
+
+        //背景构造函数 对象作用把自己绘制到画布上
+        function Background(x,y,width,height,img_src) {
+            this.bgx = x;
+            this.bgy = y;
+            this.bgwidth = width;
+            this.bgheight = height;
+            var image = new Image();
+            image.src = img_src
+            this.img = image;
+
+            //把自己绘制到画布上的功能函数
+            this.draw = function () {
+                ctx.drawImage(this.img,this.bgx,this.bgy,
+                this.bgwidth,this.bgheight);
+            }
+        }
+        //上管道构造函数 对象作用把自己绘制到画布上
+        function Up_pipe(x,y,width,height,img_src) {
+            this.upx = x;
+            this.upy = y;
+            this.upwidth = width;
+            this.upheight = height;
+            var image = new Image();
+            image.src = img_src
+            this.img = image;
+
+            //把自己绘制到画布上的功能函数
+            this.draw = function () {
+                ctx.drawImage(this.img,150,500,150,800,this.upx,this.upy,
+                        this.upwidth,this.upheight);
+            }
+        }
+        //下管道构造函数 对象作用把自己绘制到画布上
+        function Down_pipe(x,y,width,height,img_src) {
+            this.downx = x;
+            this.downy = y;
+            this.downwidth = width;
+            this.downheight = height;
+            var image = new Image();
+            image.src = img_src
+            this.img = image;
+
+            //把自己绘制到画布上的功能函数
+            this.draw = function () {
+                ctx.drawImage(this.img,0,500,150,800,this.downx,this.downy,
+                        this.downwidth,this.downheight);
+            }
+        }
+
+
+
+        function judge() {
+            //判断游戏结束
+            //碰撞 关闭定时器 绘制gameover提示
+            if((bird.bx+bird.bwidth>up.upx)&&
+                    (bird.bx+bird.bwidth<
+                    up.upx+up.upwidth+bird.bwidth)
+                    &&((bird.by<up.upheight)||
+                    (bird.by+bird.bheight>down.downy))){
+
+                    clearInterval(time);
+
+
+            }
+
+
+            //修改角色属性
+            //小鸟匀速下落 重力加速度
+            bird.by += g;
+            //管道
+            if(up.upx+up.upwidth>0){
+                up.upx -= speed;
+                down.downx -= speed;
+            }else {
+                //循环从右边出现
+                flag = true;
+
+                up.upx = 400;
+                down.downx = 400;
+                //高度变化   0-1
+                //管道高度100-300
+                //空隙 150
+                //区域 550
+                up.upheight = Math.random()*200+100;
+                //计算并修改下管道位置
+                down.downy = up.upheight+0+dis;
+                down.downheight = 550 - down.downy;
+            }
+
+            //得分 flag
+            if(flag && bird.bx>=up.upx+up.upwidth){
+                score++;
+                flag = false;
+            }
+            //大于0-100 100-200 200-300 300-400 >500增加障碍物角色
+            //
+            ctx.fillStyle="rgb(255,255,255)";
+            ctx.font = "30px Accent";
+            ctx.fillText(score,200,100);
+
+
+        }
+
+
+        function drawall() {
+            //
+            ctx.clearRect(0,0,400,600);
+            //绘制所有游戏角色 注意层级 绘制顺序
+            for (var i = 0;i < array.length;i++){
+                array[i].draw()
+
+            }
+
+            //判断游戏结束 碰撞判断
+            judge();
+
+
+        }
+
+        function keyup(e) {
+            if(e.keyCode == 32){
+                bird.by -= 50;
+            }
+        }
+
+        //game开始 main函数
+        function init() {
+            ctx = document.getElementById('canvas')
+                    .getContext('2d');
+
+            //玩家控制游戏
+            document.onkeyup = keyup;
+
+            //开启定时器
+            drawall();
+
+            time = setInterval(drawall,100);
+        }
+    </script>
+</head>
+<body onload="init()">
+<!--宽度和高度-->
+<canvas id="canvas" width="400" height="600"
+style="margin-left: 200px;background: pink">
+
+</canvas>
+</body>
+</html>
